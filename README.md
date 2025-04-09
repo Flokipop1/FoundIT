@@ -51,5 +51,5 @@ property of Floki, not to be used without consent
 
 ---
 
-**Developed by:** Igbinoba Erere  
+**Developed by:** Igbinoba Erere (web3_defi_king) Floki.
 **Contact:** seekang82@gmail.com
