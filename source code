@@ -1,0 +1,86 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract LostAndFound {
+    uint256 public itemCount;
+
+    enum ItemStatus { Lost, Claimed, Resolved }
+
+    struct LostItem {
+        uint256 id;
+        address owner;
+        string title;
+        string description;
+        uint256 reward;
+        address finder;
+        ItemStatus status;
+    }
+
+    mapping(uint256 => LostItem) public lostItems;
+
+    event ItemPosted(uint256 indexed id, address indexed owner, uint256 reward);
+    event ItemClaimed(uint256 indexed id, address indexed finder);
+    event RewardReleased(uint256 indexed id, address indexed finder, uint256 reward);
+
+    // Post a lost item with reward
+    function postLostItem(string memory _title, string memory _description) external payable {
+        require(msg.value > 0, "Reward required");
+
+        itemCount++;
+        lostItems[itemCount] = LostItem({
+            id: itemCount,
+            owner: msg.sender,
+            title: _title,
+            description: _description,
+            reward: msg.value,
+            finder: address(0),
+            status: ItemStatus.Lost
+        });
+
+        emit ItemPosted(itemCount, msg.sender, msg.value);
+    }
+
+    // Claim that you found an item
+    function claimFoundItem(uint256 _itemId) external {
+        LostItem storage item = lostItems[_itemId];
+        require(item.status == ItemStatus.Lost, "Item not claimable");
+        require(item.owner != msg.sender, "Owner can't claim");
+
+        item.finder = msg.sender;
+        item.status = ItemStatus.Claimed;
+
+        emit ItemClaimed(_itemId, msg.sender);
+    }
+
+    // Owner confirms item returned and sends reward
+    function confirmReturn(uint256 _itemId) external {
+        LostItem storage item = lostItems[_itemId];
+        require(item.status == ItemStatus.Claimed, "Item not claimed");
+        require(item.owner == msg.sender, "Only owner can confirm");
+
+        item.status = ItemStatus.Resolved;
+        payable(item.finder).transfer(item.reward);
+
+        emit RewardReleased(_itemId, item.finder, item.reward);
+    }
+
+    // View all item info
+    function getItem(uint256 _itemId) external view returns (
+        address owner,
+        string memory title,
+        string memory description,
+        uint256 reward,
+        address finder,
+        ItemStatus status
+    ) {
+        LostItem storage item = lostItems[_itemId];
+        return (
+            item.owner,
+            item.title,
+            item.description,
+            item.reward,
+            item.finder,
+            item.status
+        );
+    }
+}
